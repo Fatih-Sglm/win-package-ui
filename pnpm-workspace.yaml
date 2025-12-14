@@ -1,5 +1,0 @@
-ignoredBuiltDependencies:
-  - libui-node
-
-onlyBuiltDependencies:
-  - electron
