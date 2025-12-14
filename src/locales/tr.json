@@ -1,0 +1,92 @@
+{
+    "app": {
+        "title": "Paket Yöneticisi",
+        "settings": "Ayarlar",
+        "language": "Dil",
+        "appearance": "Görünüm",
+        "updatesAvailable": "{count} güncelleme mevcut",
+        "admin": "Yönetici",
+        "notAdmin": "Yönetici Değil",
+        "interactiveMode": "İnteraktif Mod",
+        "installNew": "Yeni Yükle",
+        "refresh": "Yenile",
+        "refreshing": "Yenileniyor...",
+        "updateAll": "Hepsini Güncelle",
+        "console": "Konsol",
+        "closeConsole": "Konsolu Kapat",
+        "consoleStart": "Paket Yöneticisi başlatıldı",
+        "consoleEmpty": "Konsol boş",
+        "theme": {
+            "light": "Aydınlık",
+            "dark": "Karanlık",
+            "system": "Sistem"
+        },
+        "pagination": {
+            "previous": "Önceki",
+            "next": "Sonraki"
+        }
+    },
+    "package": {
+        "update": "Güncelle",
+        "updating": "Güncelleniyor...",
+        "uninstall": "Kaldır",
+        "install": "Yükle",
+        "installing": "Yükleniyor...",
+        "currentVersion": "Mevcut",
+        "newVersion": "Yeni",
+        "version": "Sürüm",
+        "unknownVersion": "Bilinmiyor",
+        "upToDate": "Güncel",
+        "source": {
+            "all": "Tümü",
+            "winget": "WinGet",
+            "chocolatey": "Chocolatey",
+            "msstore": "MS Store"
+        },
+        "category": {
+            "all": "Tümü"
+        },
+        "filter": {
+            "updatesOnly": "Sadece güncellemesi olanları göster",
+            "searchPlaceholder": "Uygulama adı veya ID'si ile ara...",
+            "noResults": "Sonuç bulunamadı",
+            "noResultsDesc": "\"{query}\" için paket bulunamadı",
+            "clearSearch": "Aramayı Temizle",
+            "foundCount": "{count} paket bulundu",
+            "itemsPerPage": "Sayfa başı"
+        }
+    },
+    "modal": {
+        "install": {
+            "title": "Yeni Uygulama Yükle",
+            "selectSource": "Kaynak Seçin",
+            "search": "Uygulama adı veya ID'si yazın...",
+            "placeholder": "Aramak için yukarıdaki alana yazın",
+            "notFound": "Sonuç bulunamadı",
+            "searching": "Aranıyor...",
+            "versions": "Tüm Versiyonlar",
+            "selectVersion": "Sürüm Seç",
+            "versionsLoading": "Versiyonlar yükleniyor...",
+            "success": "Yüklendi",
+            "error": "Hata oluştu"
+        },
+        "error": {
+            "title": "Hata",
+            "package": "Paket",
+            "errorLabel": "Hata:",
+            "outputLabel": "Komut Çıktısı:",
+            "solutions": "Olası Çözümler:",
+            "copy": "Kopyala",
+            "copied": "Kopyalandı!",
+            "close": "Tamam",
+            "openMsStore": "MS Store'u Aç"
+        },
+        "confirm": {
+            "uninstall": "{name} paketini kaldırmak istediğinize emin misiniz?",
+            "updateAll": "{count} paket güncellenecek. Devam etmek istiyor musunuz?"
+        }
+    },
+    "bulk": {
+        "title": "Toplu Güncelleme"
+    }
+}

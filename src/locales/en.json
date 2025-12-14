@@ -1,0 +1,92 @@
+{
+    "app": {
+        "title": "Package Manager",
+        "settings": "Settings",
+        "language": "Language",
+        "appearance": "Appearance",
+        "updatesAvailable": "{count} updates available",
+        "notAdmin": "Not Admin",
+        "admin": "Admin",
+        "interactiveMode": "Interactive Mode",
+        "installNew": "Install New",
+        "refresh": "Refresh",
+        "refreshing": "Refreshing...",
+        "updateAll": "Update All",
+        "console": "Console",
+        "closeConsole": "Close Console",
+        "consoleStart": "Package Manager started",
+        "consoleEmpty": "Console empty",
+        "theme": {
+            "light": "Light",
+            "dark": "Dark",
+            "system": "System"
+        },
+        "pagination": {
+            "previous": "Previous",
+            "next": "Next"
+        }
+    },
+    "package": {
+        "update": "Update",
+        "updating": "Updating...",
+        "uninstall": "Uninstall",
+        "install": "Install",
+        "installing": "Installing...",
+        "currentVersion": "Current",
+        "newVersion": "New",
+        "version": "Version",
+        "unknownVersion": "Unknown",
+        "upToDate": "Up to date",
+        "source": {
+            "all": "All",
+            "winget": "WinGet",
+            "chocolatey": "Chocolatey",
+            "msstore": "MS Store"
+        },
+        "category": {
+            "all": "All"
+        },
+        "filter": {
+            "updatesOnly": "Show only updates",
+            "searchPlaceholder": "Search by app name or ID...",
+            "noResults": "No results found",
+            "noResultsDesc": "No packages found for \"{query}\"",
+            "clearSearch": "Clear Search",
+            "foundCount": "{count} packages found",
+            "itemsPerPage": "Per page"
+        }
+    },
+    "modal": {
+        "install": {
+            "title": "Install New Application",
+            "selectSource": "Select Source",
+            "search": "Type app name or ID...",
+            "placeholder": "Type above to search",
+            "notFound": "No results found",
+            "searching": "Searching...",
+            "versions": "All Versions",
+            "selectVersion": "Select Version",
+            "versionsLoading": "Loading versions...",
+            "success": "Installed",
+            "error": "Error occurred"
+        },
+        "error": {
+            "title": "Error",
+            "package": "Package",
+            "errorLabel": "Error:",
+            "outputLabel": "Command Output:",
+            "solutions": "Possible Solutions:",
+            "copy": "Copy",
+            "copied": "Copied!",
+            "close": "OK",
+            "openMsStore": "Open MS Store"
+        },
+        "confirm": {
+            "uninstall": "Are you sure you want to uninstall {name}?",
+            "updateAll": "{count} packages will be updated. Do you want to continue?"
+        }
+    },
+    "bulk": {
+        "title": "Bulk Update"
+    }
+}
