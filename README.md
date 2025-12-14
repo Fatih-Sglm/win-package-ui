@@ -3,7 +3,6 @@
 Windows için modern, hızlı ve kullanıcı dostu bir paket yöneticisi arayüzü. **Winget** ve **Chocolatey** gibi popüler paket yöneticilerini tek bir çatı altında toplayarak, komut satırı ile uğraşmadan uygulamalarınızı yönetmenizi sağlar.
 
 ![Uygulama Ekran Görüntüsü](screenshot.png)
-*(Ekran görüntüsü eklenebilir)*
 
 ## ✨ Özellikler
 
