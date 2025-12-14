@@ -5,6 +5,7 @@ import { PackageSource, CategoryType } from '@/models'
 import type { Package, UpdateResult } from '@/models'
 import type { PackageProvider } from './types'
 import { detectCategory } from './types'
+import { CommandBuilder } from '@/services/command-builder'
 
 export class WingetProvider implements PackageProvider {
     readonly name = PackageSource.Winget
@@ -24,10 +25,12 @@ export class WingetProvider implements PackageProvider {
 
         try {
             if (onlyUpdates) {
-                const result = await ipcService.executeCommand('winget upgrade --accept-source-agreements')
+                const command = CommandBuilder.build('winget.upgrade.list')
+                const result = await ipcService.executeCommand(command)
                 return this.parseUpgradeOutput(result.stdout)
             } else {
-                const result = await ipcService.executeCommand('winget list --accept-source-agreements')
+                const command = CommandBuilder.build('winget.list')
+                const result = await ipcService.executeCommand(command)
                 return this.parseListOutput(result.stdout)
             }
         } catch (error) {
@@ -39,8 +42,8 @@ export class WingetProvider implements PackageProvider {
     async updatePackage(id: string, interactive: boolean): Promise<UpdateResult> {
         try {
             const command = interactive
-                ? `winget install ${id} --interactive`
-                : `winget upgrade --id ${id} --accept-source-agreements --accept-package-agreements`
+                ? CommandBuilder.build('winget.upgrade.interactive', { id })
+                : CommandBuilder.build('winget.upgrade', { id })
 
             const result = await ipcService.executeCommand(command)
             const output = result.stdout + result.stderr
@@ -67,8 +70,8 @@ export class WingetProvider implements PackageProvider {
     async installPackage(id: string, interactive: boolean): Promise<UpdateResult> {
         try {
             const command = interactive
-                ? `winget install ${id} --interactive`
-                : `winget install ${id} --accept-source-agreements --accept-package-agreements`
+                ? CommandBuilder.build('winget.install.interactive', { id })
+                : CommandBuilder.build('winget.install', { id })
 
             const result = await ipcService.executeCommand(command)
             const output = result.stdout + result.stderr
@@ -91,7 +94,7 @@ export class WingetProvider implements PackageProvider {
 
     async uninstallPackage(id: string): Promise<UpdateResult> {
         try {
-            const command = `winget uninstall --id ${id} --accept-source-agreements`
+            const command = CommandBuilder.build('winget.uninstall', { id })
             const result = await ipcService.executeCommand(command)
             const output = result.stdout + result.stderr
 
@@ -113,7 +116,8 @@ export class WingetProvider implements PackageProvider {
 
     async searchPackages(query: string): Promise<Package[]> {
         try {
-            const result = await ipcService.executeCommand(`winget search "${query}" --accept-source-agreements`)
+            const command = CommandBuilder.build('winget.search', { query })
+            const result = await ipcService.executeCommand(command)
             return this.parseSearchOutput(result.stdout)
         } catch {
             return []

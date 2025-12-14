@@ -39,7 +39,7 @@
 
           <Alert v-if="pkg.updateResult" :variant="pkg.updateResult.success ? 'default' : 'destructive'">
             <AlertDescription>
-              {{ pkg.updateResult.success ? '✅ ' + t('modal.install.success') : '❌ ' + t('modal.install.error') }}
+              {{ pkg.updateResult.success ? '✅ ' + resultMessage : '❌ ' + t('modal.install.error') }}
             </AlertDescription>
           </Alert>
         </div>
@@ -60,7 +60,7 @@
             variant="outline"
             size="sm"
             :disabled="pkg.updating"
-            @click="handleUninstall"
+            @click="showUninstallConfirm = true"
             class="flex-1 sm:flex-none"
           >
             {{ t('package.uninstall') }}
@@ -69,19 +69,46 @@
       </div>
     </CardContent>
   </Card>
+
+  <Dialog v-model:open="showUninstallConfirm">
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>{{ t('package.uninstall') }}</DialogTitle>
+        <DialogDescription>
+          {{ t('modal.confirm.uninstall', { name: pkg.name }) }}
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <Button variant="outline" @click="showUninstallConfirm = false">
+          {{ t('modal.error.close') }}
+        </Button>
+        <Button variant="destructive" @click="handleUninstall">
+          {{ t('package.uninstall') }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { ArrowRight, Check, Loader2 } from 'lucide-vue-next'
 import { ProgressBar } from '@/components/common'
 import type { Package } from '@/models'
-import { usePackagesStore, useUIStore } from '@/stores'
+import { usePackagesStore, useUIStore, useNotificationStore } from '@/stores'
 
 interface Props {
   pkg: Package
@@ -92,6 +119,10 @@ const props = defineProps<Props>()
 const { t } = useI18n()
 const packagesStore = usePackagesStore()
 const uiStore = useUIStore()
+const notificationStore = useNotificationStore()
+
+const showUninstallConfirm = ref(false)
+const lastAction = ref<'update' | 'uninstall' | null>(null)
 
 const sourceClass = computed(() => {
   const classes: Record<string, string> = {
@@ -102,10 +133,22 @@ const sourceClass = computed(() => {
   return classes[props.pkg.source] || ''
 })
 
+const resultMessage = computed(() => {
+  if (!props.pkg.updateResult?.success) return t('modal.install.error')
+  return lastAction.value === 'uninstall' ? t('modal.install.uninstallSuccess') : t('modal.install.success')
+})
+
 async function handleUpdate() {
+  lastAction.value = 'update'
   const result = await packagesStore.updatePackage(props.pkg)
   
-  if (!result.success) {
+  if (result.success) {
+    notificationStore.success(
+      t('package.update'),
+      t('modal.install.success'),
+      1000
+    )
+  } else {
     uiStore.openErrorModal({
       title: t('modal.error.title'),
       packageName: props.pkg.name,
@@ -116,11 +159,18 @@ async function handleUpdate() {
 }
 
 async function handleUninstall() {
-  if (!confirm(t('modal.confirm.uninstall', { name: props.pkg.name }))) return
-
+  showUninstallConfirm.value = false
+  lastAction.value = 'uninstall'
+  
   const result = await packagesStore.uninstallPackage(props.pkg)
   
-  if (!result.success) {
+  if (result.success) {
+    notificationStore.success(
+      t('package.uninstall'),
+      t('modal.install.uninstallSuccess'),
+      1000
+    )
+  } else {
     uiStore.openErrorModal({
       title: t('modal.error.title'),
       packageName: props.pkg.name,

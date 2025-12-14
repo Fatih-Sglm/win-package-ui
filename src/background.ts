@@ -95,7 +95,7 @@ async function createWindow() {
 
   // Remove menu bar completely
   win.setMenuBarVisibility(false)
-  win.webContents.openDevTools()
+  //win.webContents.openDevTools()
 
   try {
     if (isDevelopment) {

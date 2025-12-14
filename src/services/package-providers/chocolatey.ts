@@ -5,6 +5,7 @@ import { PackageSource } from '@/models'
 import type { Package, UpdateResult } from '@/models'
 import type { PackageProvider } from './types'
 import { detectCategory } from './types'
+import { CommandBuilder } from '@/services/command-builder'
 
 export class ChocolateyProvider implements PackageProvider {
     readonly name = PackageSource.Chocolatey
@@ -23,7 +24,9 @@ export class ChocolateyProvider implements PackageProvider {
         if (!isInstalled) return []
 
         try {
-            const command = onlyUpdates ? 'choco outdated -r' : 'choco list -lo -r'
+            const command = onlyUpdates
+                ? CommandBuilder.build('choco.outdated')
+                : CommandBuilder.build('choco.list')
             const result = await ipcService.executeCommand(command)
             return this.parseOutput(result.stdout, onlyUpdates)
         } catch (error) {
@@ -34,7 +37,7 @@ export class ChocolateyProvider implements PackageProvider {
 
     async updatePackage(id: string, _interactive: boolean): Promise<UpdateResult> {
         try {
-            const command = `choco upgrade ${id} -y`
+            const command = CommandBuilder.build('choco.upgrade', { id })
             const result = await ipcService.executeCommand(command)
             const output = result.stdout + result.stderr
 
@@ -56,7 +59,7 @@ export class ChocolateyProvider implements PackageProvider {
 
     async installPackage(id: string, _interactive: boolean): Promise<UpdateResult> {
         try {
-            const command = `choco install ${id} -y`
+            const command = CommandBuilder.build('choco.install', { id })
             const result = await ipcService.executeCommand(command)
             const output = result.stdout + result.stderr
 
@@ -78,7 +81,7 @@ export class ChocolateyProvider implements PackageProvider {
 
     async uninstallPackage(id: string): Promise<UpdateResult> {
         try {
-            const command = `choco uninstall ${id} -y`
+            const command = CommandBuilder.build('choco.uninstall', { id })
             const result = await ipcService.executeCommand(command)
             const output = result.stdout + result.stderr
 
@@ -100,7 +103,8 @@ export class ChocolateyProvider implements PackageProvider {
 
     async searchPackages(query: string): Promise<Package[]> {
         try {
-            const result = await ipcService.executeCommand(`choco search ${query} -r`)
+            const command = CommandBuilder.build('choco.search', { query })
+            const result = await ipcService.executeCommand(command)
             return this.parseSearchOutput(result.stdout)
         } catch {
             return []

@@ -7,6 +7,8 @@
         "updatesAvailable": "{count} updates available",
         "notAdmin": "Not Admin",
         "admin": "Admin",
+        "adminRequired": "Admin Mode Required",
+        "adminRequiredDesc": "Application is not running in admin mode. Chocolatey and some operations may fail.",
         "interactiveMode": "Interactive Mode",
         "installNew": "Install New",
         "refresh": "Refresh",
@@ -68,6 +70,7 @@
             "selectVersion": "Select Version",
             "versionsLoading": "Loading versions...",
             "success": "Installed",
+            "uninstallSuccess": "Uninstalled",
             "error": "Error occurred"
         },
         "error": {

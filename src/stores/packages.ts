@@ -1,7 +1,7 @@
 // Packages Store - Paket yönetimi için Pinia store
 
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { packageRegistry } from '@/services/package-providers'
 import { PackageSource, CategoryType } from '@/models'
 import type { Package, UpdateResult } from '@/models'
@@ -17,8 +17,14 @@ export const usePackagesStore = defineStore('packages', () => {
     const activeSource = ref<PackageSource | 'all'>('all')
     const activeCategory = ref<CategoryType | 'all'>('all')
     const searchQuery = ref('')
-    const showOnlyUpdates = ref(true)
-    const interactiveMode = ref(true)
+
+    // Persisted Settings
+    const showOnlyUpdates = ref(localStorage.getItem('settings.showOnlyUpdates') !== 'false')
+    const interactiveMode = ref(localStorage.getItem('settings.interactiveMode') !== 'false')
+
+    // Watchers for persistence
+    watch(showOnlyUpdates, (val) => localStorage.setItem('settings.showOnlyUpdates', String(val)))
+    watch(interactiveMode, (val) => localStorage.setItem('settings.interactiveMode', String(val)))
 
     // Bulk update progress
     const bulkProgress = ref({

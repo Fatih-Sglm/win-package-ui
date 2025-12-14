@@ -34,10 +34,12 @@ export const useAppStore = defineStore('app', () => {
     // Actions
     function setLocale(newLocale: 'tr' | 'en') {
         locale.value = newLocale
-        localStorage.setItem('locale', newLocale)
-        // i18n'i burada import edip kullanmak cycle yaratabilir, bu yüzden App.vue içinde watcher kullanacağız 
-        // veya i18n importunu store dışında yapacağız.
+        // Watcher handles localStorage
     }
+
+    watch(locale, (newLocale) => {
+        localStorage.setItem('locale', newLocale)
+    })
 
     async function checkAdminStatus() {
         try {
@@ -45,10 +47,12 @@ export const useAppStore = defineStore('app', () => {
 
             if (!isAdmin.value) {
                 const notificationStore = useNotificationStore()
+                // @ts-ignore
+                const t = i18n.global.t
                 notificationStore.warning(
-                    'Yönetici Modu Gerekli', // Bu stringler de localize edilmeli store içinde
-                    'Uygulama yönetici modunda çalışmıyor. Chocolatey ve bazı işlemler başarısız olabilir.',
-                    8000
+                    t('app.adminRequired'),
+                    t('app.adminRequiredDesc'),
+                    3000
                 )
             }
         } catch (error) {

@@ -7,6 +7,8 @@
         "updatesAvailable": "{count} güncelleme mevcut",
         "admin": "Yönetici",
         "notAdmin": "Yönetici Değil",
+        "adminRequired": "Yönetici Modu Gerekli",
+        "adminRequiredDesc": "Uygulama yönetici modunda çalışmıyor. Chocolatey ve bazı işlemler başarısız olabilir.",
         "interactiveMode": "İnteraktif Mod",
         "installNew": "Yeni Yükle",
         "refresh": "Yenile",
@@ -68,6 +70,7 @@
             "selectVersion": "Sürüm Seç",
             "versionsLoading": "Versiyonlar yükleniyor...",
             "success": "Yüklendi",
+            "uninstallSuccess": "Kaldırıldı",
             "error": "Hata oluştu"
         },
         "error": {
