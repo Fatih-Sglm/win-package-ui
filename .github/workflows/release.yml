@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers on version tags like v1.0.0, v0.2.1, etc.
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'windows-latest'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build and release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'WinGet UI ${{ github.ref_name }}'
+          releaseBody: |
+            ## 🎉 WinGet UI ${{ github.ref_name }}
+            
+            ### 📦 İndirme
+            Windows için installer dosyalarını aşağıdan indirebilirsiniz:
+            - **MSI Installer**: Kurulum sihirbazı ile kolay kurulum
+            - **EXE Installer**: Taşınabilir çalıştırılabilir dosya
+            
+            ### ✨ Özellikler
+            - Modern ve hızlı arayüz
+            - Winget ve Chocolatey desteği
+            - Türkçe/İngilizce dil desteği
+            - Aydınlık/Karanlık tema
+            
+            ### 📝 Değişiklikler
+            Detaylı değişiklik listesi için commit geçmişine bakınız.
+            
+            ---
+            **Tam değişiklik listesi**: https://github.com/${{ github.repository }}/compare/v0.0.0...${{ github.ref_name }}
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
