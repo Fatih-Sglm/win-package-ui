@@ -1,10 +1,10 @@
 [package]
 name = "app"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
+description = "Modern Windows package manager UI for Winget and Chocolatey"
+authors = ["Fatih Sglm"]
+license = "MIT"
+repository = "https://github.com/Fatih-Sglm/winget-ui"
 edition = "2021"
 rust-version = "1.77.2"
 

@@ -71,6 +71,36 @@ Projeyi yerel ortamınızda çalıştırmak veya geliştirmek için aşağıdaki
     npm run tauri build
     ```
 
+## 📦 Release Oluşturma
+
+Proje, GitHub Actions ile otomatik release sistemi kullanır. Her yeni versiyon tag'i oluşturulduğunda otomatik olarak Windows installer'ları (MSI ve EXE) build edilir.
+
+### Yeni Release Adımları
+
+1.  **Versiyon numarasını güncelleyin:**
+    - `src-tauri/tauri.conf.json` → `"version": "0.2.0"`
+    - `src-tauri/Cargo.toml` → `version = "0.2.0"`
+
+2.  **Değişiklikleri commit edin:**
+    ```bash
+    git add .
+    git commit -m "chore: bump version to 0.2.0"
+    git push
+    ```
+
+3.  **Tag oluşturun ve push edin:**
+    ```bash
+    git tag v0.2.0
+    git push origin v0.2.0
+    ```
+
+4.  **GitHub Actions otomatik olarak:**
+    - Uygulamayı build eder
+    - MSI ve EXE installer'ları oluşturur
+    - GitHub Release sayfasına yükler
+
+> **Not:** Release'ler [GitHub Releases](https://github.com/Fatih-Sglm/winget-ui/releases) sayfasından indirilebilir.
+
 ## ⚠️ Önemli Notlar
 
 *   **Yönetici Yetkisi (Admin Rights):** Paket yükleme ve kaldırma işlemleri genellikle Windows'ta yönetici izni gerektirir. Uygulamanın tüm özelliklerini sorunsuz kullanabilmek için **Yönetici olarak çalıştırılması** tavsiye edilir. Uygulama, yönetici modunda çalışıp çalışmadığını arayüzde belirtir.
