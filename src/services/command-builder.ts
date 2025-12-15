@@ -17,61 +17,60 @@ export type CommandTemplate =
     | 'choco.uninstall'
 
 export class CommandBuilder {
-    private static readonly templates: Record<CommandTemplate, string> = {
+    private static readonly templates: Record<CommandTemplate, { program: string, args: string[] }> = {
         // Winget
-        'winget.list': 'winget list --accept-source-agreements',
-        'winget.search': 'winget search "{query}" --accept-source-agreements',
-        'winget.upgrade.list': 'winget upgrade --accept-source-agreements',
-        'winget.install': 'winget install --id {id} --accept-source-agreements --accept-package-agreements',
-        'winget.install.interactive': 'winget install --id {id} --interactive',
-        'winget.upgrade': 'winget upgrade --id {id} --accept-source-agreements --accept-package-agreements',
-        'winget.upgrade.interactive': 'winget upgrade --id {id} --interactive',
-        'winget.uninstall': 'winget uninstall --id {id} --accept-source-agreements',
+        'winget.list': { program: 'winget', args: ['list', '--accept-source-agreements'] },
+        'winget.search': { program: 'winget', args: ['search', '{query}', '--accept-source-agreements'] },
+        'winget.upgrade.list': { program: 'winget', args: ['upgrade', '--accept-source-agreements'] },
+        'winget.install': { program: 'winget', args: ['install', '--id', '{id}', '--accept-source-agreements', '--accept-package-agreements'] },
+        'winget.install.interactive': { program: 'winget', args: ['install', '{id}', '--interactive'] },
+        'winget.upgrade': { program: 'winget', args: ['upgrade', '--id', '{id}', '--accept-source-agreements', '--accept-package-agreements'] },
+        'winget.upgrade.interactive': { program: 'winget', args: ['upgrade', '--id', '{id}', '--interactive'] },
+        'winget.uninstall': { program: 'winget', args: ['uninstall', '--id', '{id}', '--accept-source-agreements'] },
 
         // Chocolatey
-        'choco.list': 'choco list -lo -r',
-        'choco.outdated': 'choco outdated -r',
-        'choco.search': 'choco search {query} -r',
-        'choco.install': 'choco install {id} -y',
-        'choco.upgrade': 'choco upgrade {id} -y',
-        'choco.uninstall': 'choco uninstall {id} -y'
+        'choco.list': { program: 'choco', args: ['list', '-lo', '-r'] },
+        'choco.outdated': { program: 'choco', args: ['outdated', '-r'] },
+        'choco.search': { program: 'choco', args: ['search', '{query}', '-r'] },
+        'choco.install': { program: 'choco', args: ['install', '{id}', '-y'] },
+        'choco.upgrade': { program: 'choco', args: ['upgrade', '{id}', '-y'] },
+        'choco.uninstall': { program: 'choco', args: ['uninstall', '{id}', '-y'] }
     }
 
     /**
-     * Builds a safe command string from a template and parameters
+     * Builds a safe command object from a template and parameters
      * @param template Template key
      * @param params Key-value pairs for replacement (e.g. { id: '...' })
      * @throws Error if parameters are invalid
      */
-    static build(template: CommandTemplate, params: Record<string, string> = {}): string {
-        let command = this.templates[template]
+    static build(template: CommandTemplate, params: Record<string, string> = {}): { program: string, args: string[] } {
+        const tmpl = this.templates[template]
+        const args: string[] = []
 
-        for (const [key, value] of Object.entries(params)) {
-            const placeholder = `{${key}}`
+        for (const arg of tmpl.args) {
+            let processedArg = arg
+            for (const [key, value] of Object.entries(params)) {
+                const placeholder = `{${key}}`
+                if (processedArg.includes(placeholder)) {
+                    // Validation logic
+                    if (key === 'id') {
+                        if (!Validator.validatePackageId(value)) {
+                            throw new Error(`Invalid Package ID: ${value}`)
+                        }
+                    } else if (key === 'query') {
+                        if (!Validator.validateSearchQuery(value)) {
+                            throw new Error(`Invalid Search Query: ${value}`)
+                        }
+                    }
 
-            if (command.includes(placeholder)) {
-                // Validation logic based on parameter type
-                if (key === 'id') {
-                    if (!Validator.validatePackageId(value)) {
-                        throw new Error(`Invalid Package ID: ${value}`)
-                    }
-                } else if (key === 'query') {
-                    // For search queries, we sanitize instead of strict validation
-                    // to allow spaces and some punctuation, but remove dangerous chars
-                    if (!Validator.validateSearchQuery(value)) {
-                        throw new Error(`Invalid Search Query: ${value}`)
-                    }
+                    // Safe replacement
+                    const safeValue = (key === 'query') ? Validator.sanitize(value) : value.trim()
+                    processedArg = processedArg.replace(placeholder, safeValue)
                 }
-
-                // Safe replacement
-                // Note: For 'query' in winget, we wrapped it in quotes in the template "{query}"
-                // So we just need to ensure the value doesn't break out of quotes
-                const safeValue = (key === 'query') ? Validator.sanitize(value) : value.trim()
-
-                command = command.replace(placeholder, safeValue)
             }
+            args.push(processedArg)
         }
 
-        return command
+        return { program: tmpl.program, args }
     }
 }
