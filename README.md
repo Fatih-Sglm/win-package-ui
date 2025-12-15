@@ -26,7 +26,7 @@ Windows için modern, hızlı ve kullanıcı dostu bir paket yöneticisi arayüz
 
 Bu proje, modern web ve masaüstü teknolojilerinin gücünü birleştirir:
 
-*   **[Electron](https://www.electronjs.org/):** Masaüstü entegrasyonu için.
+*   **[Tauri](https://tauri.app/):** Rust tabanlı, hafif ve güvenli masaüstü entegrasyonu.
 *   **[Vue 3](https://vuejs.org/):** Reaktif ve modüler frontend mimarisi (Composition API).
 *   **[TypeScript](https://www.typescriptlang.org/):** Tip güvenliği ve sağlam kod yapısı.
 *   **[Pinia](https://pinia.vuejs.org/):** Merkezi durum (state) yönetimi.
@@ -40,6 +40,7 @@ Projeyi yerel ortamınızda çalıştırmak veya geliştirmek için aşağıdaki
 
 ### Gereksinimler
 *   **Node.js** (v18 veya üzeri önerilir)
+*   **Rust** (Tauri için gereklidir - [rustup.rs](https://rustup.rs/))
 *   **Winget** (Windows 10/11 ile yüklü gelir)
 *   **Chocolatey** (Opsiyonel, Choco paketlerini yönetmek için gereklidir)
 
@@ -59,15 +60,15 @@ Projeyi yerel ortamınızda çalıştırmak veya geliştirmek için aşağıdaki
     ```
 
 3.  **Geliştirme Modunda Başlatın:**
-    Bu komut hem Vite sunucusunu hem de Electron penceresini başlatır (Hot Reload aktiftir).
+    Bu komut hem Vite sunucusunu hem de Tauri penceresini başlatır (Hot Reload aktiftir).
     ```bash
-    npm run electron:dev
+    npm run tauri dev
     ```
 
 4.  **Uygulamayı Derleyin (Build):**
     Üretim (Production) için exe/installer oluşturmak isterseniz:
     ```bash
-    npm run build
+    npm run tauri build
     ```
 
 ## ⚠️ Önemli Notlar
