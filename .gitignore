@@ -41,3 +41,22 @@ Thumbs.db
 
 # Project specific
 release/
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+src-tauri/WixTools/
+
+# Rust
+**/*.rs.bk
+*.pdb
+Cargo.lock  # For applications (libraries should commit this)
+
+# Platform specific
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
