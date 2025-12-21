@@ -54,21 +54,19 @@ Projeyi yerel ortamınızda çalıştırmak veya geliştirmek için aşağıdaki
 
 2.  **Bağımlılıkları Yükleyin:**
     ```bash
-    npm install
-    # veya
     pnpm install
     ```
 
 3.  **Geliştirme Modunda Başlatın:**
     Bu komut hem Vite sunucusunu hem de Tauri penceresini başlatır (Hot Reload aktiftir).
     ```bash
-    npm run tauri dev
+    pnpm run tauri dev
     ```
 
 4.  **Uygulamayı Derleyin (Build):**
     Üretim (Production) için exe/installer oluşturmak isterseniz:
     ```bash
-    npm run tauri build
+    pnpm run tauri build
     ```
 
 ## 📦 Release Oluşturma

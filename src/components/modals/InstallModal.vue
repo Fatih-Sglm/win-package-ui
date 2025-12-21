@@ -130,6 +130,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Package, Search, Loader2 } from 'lucide-vue-next'
 import { LoadingSpinner, ProgressBar } from '@/components/common'
+import { ipcService } from '@/services/ipc'
 import { useUIStore, usePackagesStore } from '@/stores'
 
 interface SearchPackage {
@@ -216,58 +217,61 @@ const searchPackages = async () => {
 
 const searchWinget = async (query: string): Promise<SearchPackage[]> => {
   try {
-    if (typeof window !== 'undefined' && window.electron) {
-      const result = await window.electron.executeCommand(`winget search "${query}" --accept-source-agreements`)
-      if (!result.success) return []
+    const result = await ipcService.executeCommand({ program: 'winget', args: ['search', query, '--accept-source-agreements'] })
+    if (!result.success) return []
 
-      const lines = result.stdout.split('\n')
-      const packages: SearchPackage[] = []
-      let dataStarted = false
+    const lines = result.stdout.split('\n')
+    const packages: SearchPackage[] = []
+    let dataStarted = false
 
-      for (const line of lines) {
-        if (line.includes('Name') && line.includes('Id')) continue
-        if (line.includes('---')) { dataStarted = true; continue }
-        if (dataStarted && line.trim() && line.length > 10) {
-          try {
-            let parts = line.split(/\s{2,}/)
-            if (parts.length < 4) parts = line.trim().split(/\s+/)
-            if (parts.length >= 4) {
-              const [name, id, version, source] = parts.map(p => p.trim())
-              if (name && id && version) {
-                packages.push({ name, id, version, selectedVersion: version, source: source === 'msstore' ? 'msstore' : 'winget' })
-              }
+    for (const line of lines) {
+      if (line.includes('Name') && line.includes('Id')) continue
+      if (line.includes('---')) { dataStarted = true; continue }
+      if (dataStarted && line.trim() && line.length > 10) {
+        try {
+          let parts = line.split(/\s{2,}/)
+          if (parts.length < 4) parts = line.trim().split(/\s+/)
+          if (parts.length >= 4) {
+            const [name, id, version, source] = parts.map(p => p.trim())
+            if (name && id && version) {
+              packages.push({ name, id, version, selectedVersion: version, source: source === 'msstore' ? 'msstore' : 'winget' })
             }
-          } catch { continue }
+          }
+        } catch {
+          continue
         }
       }
-      return packages
     }
+
+    return packages
+  } catch (error) {
+    console.error('winget search error:', error)
     return []
-  } catch { return [] }
+  }
 }
 
 const searchChocolatey = async (query: string): Promise<SearchPackage[]> => {
   try {
-    if (typeof window !== 'undefined' && window.electron) {
-      const checkResult = await window.electron.checkCommand('choco')
-      if (!checkResult) return []
+    const checkResult = await ipcService.checkCommand('choco')
+    if (!checkResult) return []
 
-      const result = await window.electron.executeCommand(`choco search ${query} -r --limit-output`)
-      if (!result.success) return []
+    const result = await ipcService.executeCommand({ program: 'choco', args: ['search', query, '-r', '--limit-output'] })
+    if (!result.success) return []
 
-      const packages: SearchPackage[] = []
-      for (const line of result.stdout.split('\n')) {
-        if (line.trim() && line.includes('|')) {
-          const [name, version] = line.split('|').map(p => p.trim())
-          if (name && version) {
-            packages.push({ name, id: name, version, selectedVersion: version, source: 'chocolatey' })
-          }
+    const packages: SearchPackage[] = []
+    for (const line of result.stdout.split('\n')) {
+      if (line.trim() && line.includes('|')) {
+        const [name, version] = line.split('|').map(p => p.trim())
+        if (name && version) {
+          packages.push({ name, id: name, version, selectedVersion: version, source: 'chocolatey' })
         }
       }
-      return packages
     }
+    return packages
+  } catch (error) {
+    console.error('choco search error:', error)
     return []
-  } catch { return [] }
+  }
 }
 
 const loadVersions = async (pkg: SearchPackage) => {
@@ -275,8 +279,8 @@ const loadVersions = async (pkg: SearchPackage) => {
   pkg.loadingVersions = true
   
   try {
-    if ((pkg.source === 'winget' || pkg.source === 'msstore') && window.electron) {
-      const result = await window.electron.executeCommand(`winget show --id ${pkg.id} --versions`)
+    if (pkg.source === 'winget' || pkg.source === 'msstore') {
+      const result = await ipcService.executeCommand({ program: 'winget', args: ['show', '--id', pkg.id, '--versions'] })
       if (result.success) {
         const versions: string[] = []
         let versionsStarted = false
@@ -324,8 +328,21 @@ const installPackage = async (pkg: SearchPackage) => {
       throw new Error('Bilinmeyen kaynak: ' + pkg.source)
     }
 
-    if (window.electron) {
-      const result = await window.electron.executeCommand(command)
+    if (true) {
+      // build command args for ipcService
+      let execResult
+      if (pkg.source === 'winget' || pkg.source === 'msstore') {
+        const args = ['install', '--id', pkg.id]
+        if (version) args.push('--version', String(version))
+        args.push('--accept-source-agreements', '--accept-package-agreements')
+        execResult = await ipcService.executeCommand({ program: 'winget', args })
+      } else if (pkg.source === 'chocolatey') {
+        const args = ['install', pkg.id]
+        if (version) args.push('--version', String(version))
+        args.push('-y')
+        execResult = await ipcService.executeCommand({ program: 'choco', args })
+      }
+      const result = execResult
       clearInterval(progressInterval)
       pkg.progress = 100
       pkg.installResult = result
