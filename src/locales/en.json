@@ -127,5 +127,16 @@
     },
     "bulk": {
         "title": "Bulk Update"
+    },
+    "downloads": {
+        "title": "Downloads",
+        "empty": "No active downloads",
+        "emptyDesc": "Operations will appear here when you install, update, or uninstall packages.",
+        "clearCompleted": "Clear Completed",
+        "installing": "Installing",
+        "updating": "Updating",
+        "uninstalling": "Uninstalling",
+        "completed": "Completed",
+        "failed": "Failed"
     }
 }

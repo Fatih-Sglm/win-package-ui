@@ -2,11 +2,13 @@
 
 const PREFIX = 'cache:'
 const DEFAULT_TTL = 6 * 60 * 60 * 1000 // 6 hours
+const CACHE_VERSION = 2 // Bump this to invalidate all cached data
 
 interface CacheEntry<T> {
     data: T
     timestamp: number
     ttl: number
+    version?: number
 }
 
 export const cacheService = {
@@ -16,6 +18,10 @@ export const cacheService = {
             if (!raw) return null
 
             const entry: CacheEntry<T> = JSON.parse(raw)
+            if ((entry.version || 0) < CACHE_VERSION) {
+                localStorage.removeItem(PREFIX + key)
+                return null
+            }
             if (Date.now() - entry.timestamp > entry.ttl) {
                 localStorage.removeItem(PREFIX + key)
                 return null
@@ -29,7 +35,7 @@ export const cacheService = {
 
     set<T>(key: string, data: T, ttl: number = DEFAULT_TTL): void {
         try {
-            const entry: CacheEntry<T> = { data, timestamp: Date.now(), ttl }
+            const entry: CacheEntry<T> = { data, timestamp: Date.now(), ttl, version: CACHE_VERSION }
             localStorage.setItem(PREFIX + key, JSON.stringify(entry))
         } catch {
             // localStorage full or unavailable - silently ignore

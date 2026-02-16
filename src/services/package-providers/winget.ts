@@ -210,66 +210,61 @@ export class WingetProvider implements PackageProvider {
         }
     }
 
+    private static readonly HEADER_PATTERN = /^\s*-?\s*(Name|Id|Version|Available|Source|Ad|Kimlik|S\u00fcr\u00fcm|Mevcut|Kaynak)/i
+    private static readonly NOISE_PATTERN = /upgrade|yükseltme|güncelle|mevcut\.|available\.|installed|no .* found|bulunamadı|paket yüklü/i
+    private static readonly HEADER_COMBO_PATTERN = /\bName\b.*\bId\b.*\bVersion\b|\bAd\b.*\bKimlik\b.*\bS\u00fcr\u00fcm\b/i
+
+    private isNoiseLine(trimmed: string): boolean {
+        if (trimmed.length < 5) return true
+        if (trimmed.includes('---')) return true
+        if (trimmed.match(/^[-\\|/\s]+$/)) return true
+        if (WingetProvider.HEADER_PATTERN.test(trimmed)) return true
+        if (WingetProvider.NOISE_PATTERN.test(trimmed)) return true
+        if (WingetProvider.HEADER_COMBO_PATTERN.test(trimmed)) return true
+        return false
+    }
+
     private parseUpgradeOutput(stdout: string): Package[] {
         const packages: Package[] = []
-        const lines = stdout.split('\n')
-
-        for (const line of lines) {
-            const trimmed = line.trim()
-            if (trimmed.length < 5) continue
-
-            if (trimmed.includes('---')) continue
-            if (line.match(/^(Name|Id|Version|Available|Ad|Kimlik|S\u00fcr\u00fcm|Mevcut)/i)) continue
-            if (trimmed.toLowerCase().includes('upgrade') || trimmed.toLowerCase().includes('güncelle')) continue
-
+        for (const line of stdout.split('\n')) {
+            if (this.isNoiseLine(line.trim())) continue
             try {
                 const pkg = this.parsePackageLine(line, { isUpgrade: true, isSearch: false })
                 if (pkg) packages.push(pkg)
             } catch { continue }
         }
-
         return packages
     }
 
     private parseListOutput(stdout: string): Package[] {
         const packages: Package[] = []
-        const lines = stdout.split('\n')
-
-        for (const line of lines) {
-            const trimmed = line.trim()
-            if (trimmed.length < 5) continue
-
-            if (trimmed.includes('---')) continue
-            if (line.match(/^(Name|Id|Version|Available|Ad|Kimlik|S\u00fcr\u00fcm)/i)) continue
-
+        for (const line of stdout.split('\n')) {
+            if (this.isNoiseLine(line.trim())) continue
             try {
                 const pkg = this.parsePackageLine(line, { isUpgrade: false, isSearch: false })
                 if (pkg) packages.push(pkg)
             } catch { continue }
         }
-
         return packages
     }
 
     private parseSearchOutput(stdout: string): Package[] {
         const packages: Package[] = []
-        const lines = stdout.split('\n')
-
-        for (const line of lines) {
-            const trimmed = line.trim()
-            if (trimmed.length < 5) continue
-
-            if (trimmed.match(/^[-\\|/]$/)) continue
-            if (trimmed.includes('---')) continue
-            if (line.match(/^(Name|Id|Version|Available|Ad|Kimlik|S\u00fcr\u00fcm)/i)) continue
-
+        for (const line of stdout.split('\n')) {
+            if (this.isNoiseLine(line.trim())) continue
             try {
                 const pkg = this.parsePackageLine(line, { isUpgrade: false, isSearch: true })
                 if (pkg) packages.push(pkg)
             } catch { continue }
         }
-
         return packages
+    }
+
+    private isValidPackageId(id: string): boolean {
+        // A valid winget package ID typically contains a dot (e.g., Mozilla.Firefox)
+        // or is a 12-char alphanumeric MS Store ID (e.g., 9NBLGGH4NNS1)
+        if (!id || id.length < 2) return false
+        return id.includes('.') || /^[A-Z0-9]{9,14}$/.test(id)
     }
 
     private parsePackageLine(line: string, options: { isUpgrade: boolean, isSearch: boolean }): Package | null {
@@ -282,6 +277,9 @@ export class WingetProvider implements PackageProvider {
         if (parts.length >= 3) {
             const name = parts[0]
             const id = parts[1]
+
+            if (!this.isValidPackageId(id)) return null
+
             const versionOrCurrent = parts[2]
             const availableOrSource = parts[3]
             const sourceInfo = parts[parts.length - 1]
@@ -314,6 +312,9 @@ export class WingetProvider implements PackageProvider {
 
         const name = tokens.slice(0, idIndex).join(' ')
         const id = tokens[idIndex]
+
+        if (!this.isValidPackageId(id)) return null
+
         const version = tokens[idIndex + 1] || 'Unknown'
         const sourceName = tokens[tokens.length - 1]
 

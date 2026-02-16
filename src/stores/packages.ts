@@ -8,11 +8,24 @@ import type { Package, UpdateResult } from '@/models'
 import { useNotificationStore } from './notification'
 import { cacheService } from '@/services/cache'
 
+export interface Operation {
+    id: string
+    packageId: string
+    packageName: string
+    source: PackageSource
+    type: 'install' | 'update' | 'uninstall'
+    progress: number
+    status: 'running' | 'success' | 'error'
+    error?: string
+    startedAt: number
+}
+
 export const usePackagesStore = defineStore('packages', () => {
     // State
     const packages = ref<Package[]>([])
     const isLoading = ref(false)
     const totalUpdates = ref(0)
+    const operations = ref<Operation[]>([])
 
     // Filters
     const activeSource = ref<PackageSource | 'all'>('all')
@@ -89,12 +102,20 @@ export const usePackagesStore = defineStore('packages', () => {
         return Array.from(cats).sort()
     })
 
+    // Validation
+    function isValidPackage(pkg: Package): boolean {
+        if (!pkg.id || pkg.id.length < 2) return false
+        if (!pkg.id.includes('.') && !/^[A-Z0-9]{9,14}$/.test(pkg.id)) return false
+        if (!pkg.name || pkg.name === '-') return false
+        return true
+    }
+
     // Actions
     async function fetchPackages(force = false) {
         if (!force) {
             const cached = cacheService.get<{ packages: Package[], totalUpdates: number }>('installed-packages')
             if (cached) {
-                packages.value = cached.packages.map(pkg => ({
+                packages.value = cached.packages.filter(isValidPackage).map(pkg => ({
                     ...pkg,
                     updating: false,
                     progress: 0,
@@ -107,15 +128,31 @@ export const usePackagesStore = defineStore('packages', () => {
 
         isLoading.value = true
         try {
-            const result = await packageRegistry.getAllPackages(false)
-            packages.value = result.packages.map(pkg => ({
+            // Fetch installed packages and available updates in parallel
+            const [installed, updates] = await Promise.all([
+                packageRegistry.getAllPackages(false),
+                packageRegistry.getAllPackages(true)
+            ])
+
+            // Merge: mark installed packages that have updates available
+            const updateMap = new Map(updates.packages.map(p => [p.id, p]))
+            const mergedPackages = installed.packages.map(pkg => {
+                const update = updateMap.get(pkg.id)
+                if (update) {
+                    return { ...pkg, hasUpdate: true, availableVersion: update.availableVersion }
+                }
+                return pkg
+            })
+
+            const validPackages = mergedPackages.filter(isValidPackage)
+            packages.value = validPackages.map(pkg => ({
                 ...pkg,
                 updating: false,
                 progress: 0,
                 updateResult: undefined
             }))
-            totalUpdates.value = result.totalUpdates
-            cacheService.set('installed-packages', { packages: result.packages, totalUpdates: result.totalUpdates })
+            totalUpdates.value = validPackages.filter(p => p.hasUpdate).length
+            cacheService.set('installed-packages', { packages: validPackages, totalUpdates: totalUpdates.value })
         } catch (error: any) {
             const notificationStore = useNotificationStore()
             notificationStore.error('Hata', 'Paketler yüklenirken hata oluştu: ' + error.message)
@@ -130,11 +167,37 @@ export const usePackagesStore = defineStore('packages', () => {
         cacheService.invalidate('installed-packages')
     }
 
+    function addOperation(packageId: string, packageName: string, source: PackageSource, type: Operation['type']): string {
+        const opId = `${type}-${packageId}-${Date.now()}`
+        operations.value.unshift({
+            id: opId,
+            packageId,
+            packageName,
+            source,
+            type,
+            progress: 0,
+            status: 'running',
+            startedAt: Date.now()
+        })
+        return opId
+    }
+
+    function updateOperation(opId: string, updates: Partial<Pick<Operation, 'progress' | 'status' | 'error'>>) {
+        const op = operations.value.find(o => o.id === opId)
+        if (op) Object.assign(op, updates)
+    }
+
+    function clearCompletedOperations() {
+        operations.value = operations.value.filter(o => o.status === 'running')
+    }
+
     async function updatePackage(pkg: Package): Promise<UpdateResult> {
         const index = packages.value.findIndex(p => p.id === pkg.id && p.source === pkg.source)
         if (index === -1) {
             return { success: false, output: '', packageId: pkg.id, error: 'Paket bulunamadı' }
         }
+
+        const opId = addOperation(pkg.id, pkg.name, pkg.source, 'update')
 
         packages.value[index].updating = true
         packages.value[index].progress = 0
@@ -142,7 +205,9 @@ export const usePackagesStore = defineStore('packages', () => {
 
         const progressInterval = setInterval(() => {
             if (packages.value[index].progress! < 90) {
-                packages.value[index].progress = Math.floor(Math.min(90, packages.value[index].progress! + Math.random() * 10))
+                const newProgress = Math.floor(Math.min(90, packages.value[index].progress! + Math.random() * 10))
+                packages.value[index].progress = newProgress
+                updateOperation(opId, { progress: newProgress })
             }
         }, 500)
 
@@ -152,6 +217,11 @@ export const usePackagesStore = defineStore('packages', () => {
             clearInterval(progressInterval)
             packages.value[index].progress = 100
             packages.value[index].updateResult = { success: result.success, error: result.error }
+            updateOperation(opId, {
+                progress: 100,
+                status: result.success ? 'success' : 'error',
+                error: result.error
+            })
 
             if (result.success) {
                 invalidatePackageCache(pkg.id)
@@ -169,6 +239,7 @@ export const usePackagesStore = defineStore('packages', () => {
             clearInterval(progressInterval)
             const errorResult = { success: false, output: '', packageId: pkg.id, error: error.message }
             packages.value[index].updateResult = { success: false, error: error.message }
+            updateOperation(opId, { progress: 100, status: 'error', error: error.message })
             return errorResult
         } finally {
             packages.value[index].updating = false
@@ -176,15 +247,33 @@ export const usePackagesStore = defineStore('packages', () => {
     }
 
     async function installPackage(id: string, source: PackageSource, version?: string): Promise<UpdateResult> {
+        const name = id.split('.').pop() || id
+        const opId = addOperation(id, name, source, 'install')
+
+        const progressInterval = setInterval(() => {
+            const op = operations.value.find(o => o.id === opId)
+            if (op && op.progress < 90) {
+                updateOperation(opId, { progress: Math.floor(Math.min(90, op.progress + Math.random() * 10)) })
+            }
+        }, 500)
+
         isLoading.value = true
         try {
             const result = await packageRegistry.installPackage(id, source, interactiveMode.value, version)
+            clearInterval(progressInterval)
+            updateOperation(opId, {
+                progress: 100,
+                status: result.success ? 'success' : 'error',
+                error: result.error
+            })
             if (result.success) {
                 invalidatePackageCache(id)
                 await fetchPackages(true)
             }
             return result
         } catch (error: any) {
+            clearInterval(progressInterval)
+            updateOperation(opId, { progress: 100, status: 'error', error: error.message })
             return { success: false, output: '', packageId: id, error: error.message }
         } finally {
             isLoading.value = false
@@ -256,12 +345,16 @@ export const usePackagesStore = defineStore('packages', () => {
             return { success: false, output: '', packageId: pkg.id, error: 'Paket bulunamadı' }
         }
 
+        const opId = addOperation(pkg.id, pkg.name, pkg.source, 'uninstall')
+
         packages.value[index].updating = true
         packages.value[index].progress = 0
 
         const progressInterval = setInterval(() => {
             if (packages.value[index].progress! < 90) {
-                packages.value[index].progress = Math.floor(Math.min(90, packages.value[index].progress! + Math.random() * 10))
+                const newProgress = Math.floor(Math.min(90, packages.value[index].progress! + Math.random() * 10))
+                packages.value[index].progress = newProgress
+                updateOperation(opId, { progress: newProgress })
             }
         }, 500)
 
@@ -271,6 +364,11 @@ export const usePackagesStore = defineStore('packages', () => {
             clearInterval(progressInterval)
             packages.value[index].progress = 100
             packages.value[index].updateResult = { success: result.success, error: result.error }
+            updateOperation(opId, {
+                progress: 100,
+                status: result.success ? 'success' : 'error',
+                error: result.error
+            })
 
             if (result.success) {
                 invalidatePackageCache(pkg.id)
@@ -286,6 +384,7 @@ export const usePackagesStore = defineStore('packages', () => {
             return result
         } catch (error: any) {
             clearInterval(progressInterval)
+            updateOperation(opId, { progress: 100, status: 'error', error: error.message })
             return { success: false, output: '', packageId: pkg.id, error: error.message }
         } finally {
             packages.value[index].updating = false
@@ -367,6 +466,7 @@ export const usePackagesStore = defineStore('packages', () => {
         showOnlyUpdates,
         interactiveMode,
         bulkProgress,
+        operations,
 
         // Computed
         filteredPackages,
@@ -387,6 +487,7 @@ export const usePackagesStore = defineStore('packages', () => {
         searchRemote,
         setFilter,
         getSourceCount,
-        getCategoryCount
+        getCategoryCount,
+        clearCompletedOperations
     }
 })

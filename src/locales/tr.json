@@ -31,7 +31,7 @@
             "discover": "Keşfet",
             "library": "Paketlerim",
             "search": "Ara",
-            "downloads": "İndirilenler",
+            "downloads": "İndirmeler",
             "settings": "Ayarlar",
             "back": "Geri"
         }
@@ -127,5 +127,16 @@
     },
     "bulk": {
         "title": "Toplu Güncelleme"
+    },
+    "downloads": {
+        "title": "İndirmeler",
+        "empty": "Aktif indirme yok",
+        "emptyDesc": "Paket yüklerken, güncellerken veya kaldırırken işlemler burada görünür.",
+        "clearCompleted": "Tamamlananları Temizle",
+        "installing": "Yükleniyor",
+        "updating": "Güncelleniyor",
+        "uninstalling": "Kaldırılıyor",
+        "completed": "Tamamlandı",
+        "failed": "Başarısız"
     }
 }
