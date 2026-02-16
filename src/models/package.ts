@@ -10,6 +10,9 @@ export interface Package {
     source: PackageSource
     hasUpdate: boolean
     category: CategoryType
+    publisher?: string
+    description?: string
+    version?: string // Fallback for various sources
     updating?: boolean
     progress?: number
     updateResult?: {

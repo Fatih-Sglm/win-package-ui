@@ -3,8 +3,11 @@ import { Validator } from '@/utils/validator'
 export type CommandTemplate =
     | 'winget.list'
     | 'winget.search'
+    | 'winget.show'
+    | 'winget.show.versions'
     | 'winget.upgrade.list'
     | 'winget.install'
+    | 'winget.install.version'
     | 'winget.install.interactive'
     | 'winget.upgrade'
     | 'winget.upgrade.interactive'
@@ -21,8 +24,11 @@ export class CommandBuilder {
         // Winget
         'winget.list': { program: 'winget', args: ['list', '--accept-source-agreements'] },
         'winget.search': { program: 'winget', args: ['search', '{query}', '--accept-source-agreements'] },
+        'winget.show': { program: 'winget', args: ['show', '--id', '{id}', '--accept-source-agreements'] },
+        'winget.show.versions': { program: 'winget', args: ['show', '--id', '{id}', '--versions', '--accept-source-agreements'] },
         'winget.upgrade.list': { program: 'winget', args: ['upgrade', '--accept-source-agreements'] },
         'winget.install': { program: 'winget', args: ['install', '--id', '{id}', '--accept-source-agreements', '--accept-package-agreements'] },
+        'winget.install.version': { program: 'winget', args: ['install', '--id', '{id}', '--version', '{version}', '--force', '--accept-source-agreements', '--accept-package-agreements'] },
         'winget.install.interactive': { program: 'winget', args: ['install', '{id}', '--interactive'] },
         'winget.upgrade': { program: 'winget', args: ['upgrade', '--id', '{id}', '--accept-source-agreements', '--accept-package-agreements'] },
         'winget.upgrade.interactive': { program: 'winget', args: ['upgrade', '--id', '{id}', '--interactive'] },
@@ -60,6 +66,10 @@ export class CommandBuilder {
                     } else if (key === 'query') {
                         if (!Validator.validateSearchQuery(value)) {
                             throw new Error(`Invalid Search Query: ${value}`)
+                        }
+                    } else if (key === 'version') {
+                        if (!Validator.validatePackageId(value)) {
+                            throw new Error(`Invalid Version: ${value}`)
                         }
                     }
 

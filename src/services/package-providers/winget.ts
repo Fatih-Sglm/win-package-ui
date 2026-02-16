@@ -1,7 +1,7 @@
-// WinGet Package Provider
+// Winget Package Provider implementation
 
 import { ipcService } from '../ipc'
-import { PackageSource, CategoryType } from '@/models'
+import { PackageSource } from '@/models'
 import type { Package, UpdateResult } from '@/models'
 import type { PackageProvider } from './types'
 import { detectCategory } from './types'
@@ -9,11 +9,14 @@ import { CommandBuilder } from '@/services/command-builder'
 
 export class WingetProvider implements PackageProvider {
     readonly name = PackageSource.Winget
-    readonly icon = '📦'
+    readonly icon = '�️'
 
     async isInstalled(): Promise<boolean> {
         try {
-            return await ipcService.checkCommand('winget')
+            // Winget check - some environments might return non-zero for --version but still work
+            // Or just check if the command exists/responds
+            const result = await ipcService.executeCommand({ program: 'winget', args: ['--version'] })
+            return result.success || result.stdout.length > 0
         } catch {
             return false
         }
@@ -24,15 +27,11 @@ export class WingetProvider implements PackageProvider {
         if (!isInstalled) return []
 
         try {
-            if (onlyUpdates) {
-                const command = CommandBuilder.build('winget.upgrade.list')
-                const result = await ipcService.executeCommand(command)
-                return this.parseUpgradeOutput(result.stdout)
-            } else {
-                const command = CommandBuilder.build('winget.list')
-                const result = await ipcService.executeCommand(command)
-                return this.parseListOutput(result.stdout)
-            }
+            const command = onlyUpdates
+                ? CommandBuilder.build('winget.upgrade.list')
+                : CommandBuilder.build('winget.list')
+            const result = await ipcService.executeCommand(command)
+            return onlyUpdates ? this.parseUpgradeOutput(result.stdout) : this.parseListOutput(result.stdout)
         } catch (error) {
             console.error('WingetProvider getPackages error:', error)
             return []
@@ -40,77 +39,163 @@ export class WingetProvider implements PackageProvider {
     }
 
     async updatePackage(id: string, interactive: boolean): Promise<UpdateResult> {
-        try {
-            const command = interactive
-                ? CommandBuilder.build('winget.upgrade.interactive', { id })
-                : CommandBuilder.build('winget.upgrade', { id })
-
-            const result = await ipcService.executeCommand(command)
-            const output = result.stdout + result.stderr
-
-            const errorResult = this.checkForErrors(output, id)
-            if (errorResult) return errorResult
-
-            return {
-                success: result.success,
-                output,
-                packageId: id,
-                error: result.success ? undefined : (result.error || 'Güncelleme başarısız')
-            }
-        } catch (error) {
-            return {
-                success: false,
-                output: '',
-                packageId: id,
-                error: (error as Error).message
-            }
-        }
+        return this.handlePackageAction('winget.upgrade', id, interactive)
     }
 
-    async installPackage(id: string, interactive: boolean): Promise<UpdateResult> {
-        try {
-            const command = interactive
-                ? CommandBuilder.build('winget.install.interactive', { id })
-                : CommandBuilder.build('winget.install', { id })
-
-            const result = await ipcService.executeCommand(command)
-            const output = result.stdout + result.stderr
-
-            return {
-                success: result.success,
-                output,
-                packageId: id,
-                error: result.success ? undefined : (result.error || 'Yükleme başarısız')
-            }
-        } catch (error) {
-            return {
-                success: false,
-                output: '',
-                packageId: id,
-                error: (error as Error).message
-            }
+    async installPackage(id: string, interactive: boolean, version?: string): Promise<UpdateResult> {
+        if (version) {
+            return this.handlePackageActionWithVersion('winget.install.version', id, version)
         }
+        return this.handlePackageAction('winget.install', id, interactive)
     }
 
     async uninstallPackage(id: string): Promise<UpdateResult> {
+        return this.handlePackageAction('winget.uninstall', id, false)
+    }
+
+    private async handlePackageAction(cmdKey: string, id: string, interactive: boolean): Promise<UpdateResult> {
         try {
-            const command = CommandBuilder.build('winget.uninstall', { id })
+            const command = CommandBuilder.build(cmdKey as any, { id })
+            if (interactive) {
+                // Not implemented for background commands yet, but winget usually handles it
+            }
             const result = await ipcService.executeCommand(command)
+            const packageId = id
             const output = result.stdout + result.stderr
 
-            return {
-                success: result.success,
-                output,
-                packageId: id,
-                error: result.success ? undefined : (result.error || 'Kaldırma başarısız')
+            if (result.success) {
+                return { success: true, output, packageId }
             }
-        } catch (error) {
+
+            // check for common winget errors
+            let errorMessage = result.error || 'İşlem başarısız'
+            if (output.includes('0x80070005')) errorMessage = 'Erişim engellendi (Yönetici hakları gerekebilir)'
+            if (output.includes('0x8a150006')) errorMessage = 'Paket bulunamadı'
+
+            return { success: false, output, packageId, error: errorMessage }
+        } catch (error: any) {
             return {
                 success: false,
                 output: '',
                 packageId: id,
-                error: (error as Error).message
+                error: error.message || String(error)
             }
+        }
+    }
+
+    private async handlePackageActionWithVersion(cmdKey: string, id: string, version: string): Promise<UpdateResult> {
+        try {
+            const command = CommandBuilder.build(cmdKey as any, { id, version })
+            const result = await ipcService.executeCommand(command)
+            const output = result.stdout + result.stderr
+
+            if (result.success) {
+                return { success: true, output, packageId: id }
+            }
+
+            let errorMessage = result.error || 'İşlem başarısız'
+            if (output.includes('0x80070005')) errorMessage = 'Erişim engellendi (Yönetici hakları gerekebilir)'
+            if (output.includes('0x8a150006')) errorMessage = 'Paket bulunamadı'
+
+            return { success: false, output, packageId: id, error: errorMessage }
+        } catch (error: any) {
+            return {
+                success: false,
+                output: '',
+                packageId: id,
+                error: error.message || String(error)
+            }
+        }
+    }
+
+    async getVersions(id: string, limit: number = 5): Promise<string[]> {
+        try {
+            const command = CommandBuilder.build('winget.show.versions', { id })
+            const result = await ipcService.executeCommand(command)
+            if (!result.success && !result.stdout) return []
+            return this.parseVersionsOutput(result.stdout, limit)
+        } catch {
+            return []
+        }
+    }
+
+    private parseVersionsOutput(stdout: string, limit: number): string[] {
+        const lines = stdout.split('\n')
+        const versions: string[] = []
+        let pastHeader = false
+
+        for (const line of lines) {
+            const trimmed = line.trim()
+            if (trimmed.includes('---')) {
+                pastHeader = true
+                continue
+            }
+            if (!pastHeader) continue
+            if (!trimmed || trimmed.length < 1) continue
+
+            versions.push(trimmed)
+            if (versions.length >= limit) break
+        }
+
+        return versions
+    }
+
+    async showPackage(id: string): Promise<Package | null> {
+        try {
+            const command = CommandBuilder.build('winget.show', { id })
+            const result = await ipcService.executeCommand(command)
+            if (!result.success && !result.stdout) return null
+            return this.parseShowOutput(result.stdout, id)
+        } catch {
+            return null
+        }
+    }
+
+    private parseShowOutput(stdout: string, fallbackId: string): Package | null {
+        const lines = stdout.split('\n')
+        const data: Record<string, string> = {}
+
+        // First line: "Found <Name> [<Id>]" or Turkish: "Bulundu <Name> [<Id>]"
+        const foundMatch = stdout.match(/(?:Found|Bulundu)\s+(.+?)\s+\[(.+?)\]/)
+        if (foundMatch) {
+            data['name'] = foundMatch[1].trim()
+            data['id'] = foundMatch[2].trim()
+        }
+
+        // Key mappings: English + Turkish
+        const keyMap: Record<string, string> = {
+            'version': 'version', 'sürüm': 'version',
+            'publisher': 'publisher', 'yayımcı': 'publisher', 'yayimci': 'publisher',
+            'description': 'description', 'açıklama': 'description', 'aciklama': 'description',
+            'author': 'author', 'yazar': 'author',
+            'homepage': 'homepage', 'ana sayfa': 'homepage',
+        }
+
+        for (const line of lines) {
+            const match = line.match(/^\s*([^:]+):\s*(.+)$/)
+            if (match) {
+                const rawKey = match[1].trim().toLowerCase()
+                const value = match[2].trim()
+                const mappedKey = keyMap[rawKey]
+                if (mappedKey) {
+                    data[mappedKey] = value
+                }
+            }
+        }
+
+        const id = data['id'] || fallbackId
+        const name = data['name'] || id.split('.').pop() || id
+
+        return {
+            id,
+            name,
+            currentVersion: data['version'] || '',
+            availableVersion: data['version'] || '',
+            source: PackageSource.Winget,
+            hasUpdate: false,
+            category: detectCategory(name, id),
+            publisher: data['publisher'] || data['author'],
+            description: data['description']
         }
     }
 
@@ -118,50 +203,29 @@ export class WingetProvider implements PackageProvider {
         try {
             const command = CommandBuilder.build('winget.search', { query })
             const result = await ipcService.executeCommand(command)
-            return this.parseSearchOutput(result.stdout)
+            // Limit to top 5 results for clarity
+            return this.parseSearchOutput(result.stdout).slice(0, 5)
         } catch {
             return []
         }
     }
 
-    private checkForErrors(output: string, packageId: string): UpdateResult | null {
-        const installerFailedMatch = output.match(/Installer failed with exit code: (\d+)/)
-        if (installerFailedMatch) {
-            const exitCode = installerFailedMatch[1]
-            let errorMessage = `Yükleyici hata kodu ile sonlandı: ${exitCode}`
-
-            if (exitCode === '3221226505' || exitCode === '-1073740791') {
-                errorMessage += '\n\nBu genellikle yükleyicinin beklenmedik şekilde sonlandığını gösterir.'
-            } else if (exitCode === '1603') {
-                errorMessage += '\n\nYükleme sırasında kritik hata oluştu. Lütfen yönetici olarak çalıştırmayı deneyin.'
-            } else if (exitCode === '1618') {
-                errorMessage += '\n\nBaşka bir yükleme devam ediyor. Lütfen bekleyip tekrar deneyin.'
-            }
-
-            return { success: false, output, packageId, error: errorMessage }
-        }
-        return null
-    }
-
     private parseUpgradeOutput(stdout: string): Package[] {
         const packages: Package[] = []
         const lines = stdout.split('\n')
-        let dataStarted = false
 
         for (const line of lines) {
-            if (line.includes('Name') && line.includes('Id')) continue
-            if (line.includes('---')) { dataStarted = true; continue }
+            const trimmed = line.trim()
+            if (trimmed.length < 5) continue
 
-            if (dataStarted && line.trim() && line.length > 10) {
-                if (line.toLowerCase().includes('upgrade') && line.toLowerCase().includes('available')) break
-                if (line.toLowerCase().includes('no applicable upgrade')) continue
-                if (line.trim().match(/^[-\\|/]$/)) continue
+            if (trimmed.includes('---')) continue
+            if (line.match(/^(Name|Id|Version|Available|Ad|Kimlik|S\u00fcr\u00fcm|Mevcut)/i)) continue
+            if (trimmed.toLowerCase().includes('upgrade') || trimmed.toLowerCase().includes('güncelle')) continue
 
-                try {
-                    const pkg = this.parsePackageLine(line, true)
-                    if (pkg) packages.push(pkg)
-                } catch { continue }
-            }
+            try {
+                const pkg = this.parsePackageLine(line, { isUpgrade: true, isSearch: false })
+                if (pkg) packages.push(pkg)
+            } catch { continue }
         }
 
         return packages
@@ -170,54 +234,18 @@ export class WingetProvider implements PackageProvider {
     private parseListOutput(stdout: string): Package[] {
         const packages: Package[] = []
         const lines = stdout.split('\n')
-        let dataStarted = false
 
         for (const line of lines) {
-            if (line.includes('Name') && line.includes('Id')) continue
-            if (line.includes('---')) { dataStarted = true; continue }
+            const trimmed = line.trim()
+            if (trimmed.length < 5) continue
 
-            if (dataStarted && line.trim() && line.length > 10) {
-                if (line.toLowerCase().includes('package') && line.toLowerCase().includes('found')) break
-                if (line.trim().match(/^[-\\|/]$/)) continue
+            if (trimmed.includes('---')) continue
+            if (line.match(/^(Name|Id|Version|Available|Ad|Kimlik|S\u00fcr\u00fcm)/i)) continue
 
-                try {
-                    const parts = line.split(/\s{2,}/)
-                    if (parts.length < 3) continue
-
-                    const name = parts[0].trim()
-                    const id = parts[1].trim()
-                    const currentVersion = parts[2].trim()
-                    let availableVersion = currentVersion
-                    let source = 'winget'
-                    let hasUpdate = false
-
-                    if (parts.length >= 4) {
-                        const lastPart = parts[parts.length - 1].trim()
-                        if (lastPart && /^[a-z]+$/i.test(lastPart) && lastPart.length < 15) {
-                            source = lastPart
-                            if (parts.length >= 5 && parts[3].trim()) {
-                                availableVersion = parts[3].trim()
-                                hasUpdate = true
-                            }
-                        } else if (parts[3].trim()) {
-                            availableVersion = parts[3].trim()
-                            hasUpdate = true
-                        }
-                    }
-
-                    if (!name || !id || !currentVersion || currentVersion.includes('Unknown')) continue
-
-                    const isMsStoreId = /^[A-Z0-9]{10,}$/.test(id)
-                    const pkgSource = source.toLowerCase() === 'msstore' || isMsStoreId
-                        ? PackageSource.MsStore
-                        : PackageSource.Winget
-
-                    packages.push({
-                        name, id, currentVersion, availableVersion,
-                        source: pkgSource, hasUpdate, category: detectCategory(name, id)
-                    })
-                } catch { continue }
-            }
+            try {
+                const pkg = this.parsePackageLine(line, { isUpgrade: false, isSearch: false })
+                if (pkg) packages.push(pkg)
+            } catch { continue }
         }
 
         return packages
@@ -226,90 +254,73 @@ export class WingetProvider implements PackageProvider {
     private parseSearchOutput(stdout: string): Package[] {
         const packages: Package[] = []
         const lines = stdout.split('\n')
-        let dataStarted = false
 
         for (const line of lines) {
-            if (line.includes('Name') && line.includes('Id')) continue
-            if (line.includes('---')) { dataStarted = true; continue }
+            const trimmed = line.trim()
+            if (trimmed.length < 5) continue
 
-            if (dataStarted && line.trim() && line.length > 10) {
-                try {
-                    const parts = line.split(/\s{2,}/)
-                    if (parts.length < 3) continue
+            if (trimmed.match(/^[-\\|/]$/)) continue
+            if (trimmed.includes('---')) continue
+            if (line.match(/^(Name|Id|Version|Available|Ad|Kimlik|S\u00fcr\u00fcm)/i)) continue
 
-                    const name = parts[0].trim()
-                    const id = parts[1].trim()
-                    const version = parts[2]?.trim() || 'Unknown'
-
-                    if (!name || !id) continue
-
-                    packages.push({
-                        name, id, currentVersion: version, availableVersion: version,
-                        source: PackageSource.Winget, hasUpdate: false, category: detectCategory(name, id)
-                    })
-                } catch { continue }
-            }
+            try {
+                const pkg = this.parsePackageLine(line, { isUpgrade: false, isSearch: true })
+                if (pkg) packages.push(pkg)
+            } catch { continue }
         }
 
         return packages
     }
 
-    private parsePackageLine(line: string, isUpgrade: boolean): Package | null {
-        const tokens = line.split(/\s+/).filter(t => t.trim())
-        if (tokens.length < 4) return null
+    private parsePackageLine(line: string, options: { isUpgrade: boolean, isSearch: boolean }): Package | null {
+        line = line.trim()
+        if (!line) return null
 
-        let source = 'winget'
-        let availableVersion = ''
-        let currentVersion = ''
-        let nameAndIdTokens: string[] = []
+        // 1. First, try to split by 2 or more spaces (The standard WinGet Table separator)
+        const parts = line.split(/\s{2,}/).map(p => p.trim()).filter(p => p)
 
-        const lastToken = tokens[tokens.length - 1]
-        if (lastToken && /^[a-z]+$/i.test(lastToken) && lastToken.length < 15) {
-            source = lastToken
-            availableVersion = tokens[tokens.length - 2]
-            currentVersion = tokens[tokens.length - 3]
-            nameAndIdTokens = tokens.slice(0, tokens.length - 3)
-        } else {
-            availableVersion = tokens[tokens.length - 1]
-            currentVersion = tokens[tokens.length - 2]
-            nameAndIdTokens = tokens.slice(0, tokens.length - 2)
+        if (parts.length >= 3) {
+            const name = parts[0]
+            const id = parts[1]
+            const versionOrCurrent = parts[2]
+            const availableOrSource = parts[3]
+            const sourceInfo = parts[parts.length - 1]
+
+            const currentVersion = versionOrCurrent || 'Unknown'
+            const availableVersion = options.isUpgrade ? (availableOrSource || currentVersion) : currentVersion
+            const pkgSource = (sourceInfo && sourceInfo.toLowerCase() === 'msstore') ? PackageSource.MsStore : PackageSource.Winget
+
+            return {
+                name, id, currentVersion, availableVersion,
+                source: pkgSource, hasUpdate: options.isUpgrade, category: detectCategory(name, id)
+            }
         }
 
-        if (nameAndIdTokens.length < 2) return null
+        // 2. Fallback: Intelligent Token Splitting for 1-space gaps
+        const tokens = line.split(/\s+/).filter(t => t)
+        if (tokens.length < 3) return null
 
-        let name = ''
-        let id = ''
+        // ID detection: dots or MSStore patterns
         let idIndex = -1
-
-        for (let j = 1; j < nameAndIdTokens.length; j++) {
-            const token = nameAndIdTokens[j]
-            if (token.includes('.') || /^[A-Z]/.test(token)) {
-                idIndex = j
+        for (let i = 1; i < tokens.length - 1; i++) {
+            const t = tokens[i]
+            if (t.includes('.') || /^[A-Z0-9]{12}$/.test(t) || (t.length > 5 && /[A-Z]/.test(t) && /[a-z]/.test(t))) {
+                idIndex = i
                 break
             }
         }
 
-        if (idIndex > 0) {
-            name = nameAndIdTokens.slice(0, idIndex).join(' ')
-            id = nameAndIdTokens.slice(idIndex).join(' ')
-        } else {
-            name = nameAndIdTokens[0]
-            id = nameAndIdTokens.slice(1).join('.')
-        }
+        if (idIndex === -1) idIndex = 1
 
-        if (!name || !id || !currentVersion || !availableVersion) return null
-        if (currentVersion.includes('Unknown') || availableVersion.includes('Unknown')) return null
-
-        const isMsStoreId = /^[A-Z0-9]{10,}$/.test(id)
-        const pkgSource = source.toLowerCase() === 'msstore' || isMsStoreId
-            ? PackageSource.MsStore
-            : PackageSource.Winget
-
-        if (pkgSource === PackageSource.MsStore) return null
+        const name = tokens.slice(0, idIndex).join(' ')
+        const id = tokens[idIndex]
+        const version = tokens[idIndex + 1] || 'Unknown'
+        const sourceName = tokens[tokens.length - 1]
 
         return {
-            name, id, currentVersion, availableVersion,
-            source: pkgSource, hasUpdate: isUpgrade, category: detectCategory(name, id)
+            name, id, currentVersion: version, availableVersion: version,
+            source: sourceName.toLowerCase() === 'msstore' ? PackageSource.MsStore : PackageSource.Winget,
+            hasUpdate: options.isUpgrade, category: detectCategory(name, id)
         }
     }
 }

@@ -346,9 +346,9 @@ const installPackage = async (pkg: SearchPackage) => {
       clearInterval(progressInterval)
       pkg.progress = 100
       pkg.installResult = result
-      if (result.success) setTimeout(() => {
+      if (result && (result as any).success) setTimeout(() => {
         close()
-        packagesStore.fetchPackages()
+        packagesStore.fetchPackages(true)
       }, 2000)
     }
   } catch (error: any) {

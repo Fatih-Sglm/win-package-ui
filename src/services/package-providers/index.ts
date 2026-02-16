@@ -64,7 +64,7 @@ class PackageProviderRegistry {
         return provider.updatePackage(id, interactive)
     }
 
-    async installPackage(id: string, source: PackageSource, interactive: boolean): Promise<UpdateResult> {
+    async installPackage(id: string, source: PackageSource, interactive: boolean, version?: string): Promise<UpdateResult> {
         const provider = this.get(source)
         if (!provider) {
             return {
@@ -75,7 +75,7 @@ class PackageProviderRegistry {
             }
         }
 
-        return provider.installPackage(id, interactive)
+        return provider.installPackage(id, interactive, version)
     }
 
     async uninstallPackage(id: string, source: PackageSource): Promise<UpdateResult> {
@@ -106,6 +106,18 @@ class PackageProviderRegistry {
             successful: results.filter(r => r.success).length,
             failed: results.filter(r => !r.success).length
         }
+    }
+
+    async showPackage(id: string, source: PackageSource = PackageSource.Winget): Promise<Package | null> {
+        const provider = this.get(source)
+        if (!provider?.showPackage) return null
+        return provider.showPackage(id)
+    }
+
+    async getVersions(id: string, source: PackageSource = PackageSource.Winget, limit: number = 5): Promise<string[]> {
+        const provider = this.get(source)
+        if (!provider?.getVersions) return []
+        return provider.getVersions(id, limit)
     }
 
     async searchPackages(query: string): Promise<Package[]> {

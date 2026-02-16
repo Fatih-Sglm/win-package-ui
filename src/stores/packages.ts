@@ -6,6 +6,7 @@ import { packageRegistry } from '@/services/package-providers'
 import { PackageSource, CategoryType } from '@/models'
 import type { Package, UpdateResult } from '@/models'
 import { useNotificationStore } from './notification'
+import { cacheService } from '@/services/cache'
 
 export const usePackagesStore = defineStore('packages', () => {
     // State
@@ -89,7 +90,21 @@ export const usePackagesStore = defineStore('packages', () => {
     })
 
     // Actions
-    async function fetchPackages() {
+    async function fetchPackages(force = false) {
+        if (!force) {
+            const cached = cacheService.get<{ packages: Package[], totalUpdates: number }>('installed-packages')
+            if (cached) {
+                packages.value = cached.packages.map(pkg => ({
+                    ...pkg,
+                    updating: false,
+                    progress: 0,
+                    updateResult: undefined
+                }))
+                totalUpdates.value = cached.totalUpdates
+                return
+            }
+        }
+
         isLoading.value = true
         try {
             const result = await packageRegistry.getAllPackages(false)
@@ -100,12 +115,19 @@ export const usePackagesStore = defineStore('packages', () => {
                 updateResult: undefined
             }))
             totalUpdates.value = result.totalUpdates
+            cacheService.set('installed-packages', { packages: result.packages, totalUpdates: result.totalUpdates })
         } catch (error: any) {
             const notificationStore = useNotificationStore()
             notificationStore.error('Hata', 'Paketler yüklenirken hata oluştu: ' + error.message)
         } finally {
             isLoading.value = false
         }
+    }
+
+    function invalidatePackageCache(id: string) {
+        cacheService.invalidate(`pkg:${id}`)
+        cacheService.invalidate(`versions:${id}`)
+        cacheService.invalidate('installed-packages')
     }
 
     async function updatePackage(pkg: Package): Promise<UpdateResult> {
@@ -132,6 +154,7 @@ export const usePackagesStore = defineStore('packages', () => {
             packages.value[index].updateResult = { success: result.success, error: result.error }
 
             if (result.success) {
+                invalidatePackageCache(pkg.id)
                 setTimeout(() => {
                     const idx = packages.value.findIndex(p => p.id === pkg.id && p.source === pkg.source)
                     if (idx > -1) {
@@ -149,6 +172,81 @@ export const usePackagesStore = defineStore('packages', () => {
             return errorResult
         } finally {
             packages.value[index].updating = false
+        }
+    }
+
+    async function installPackage(id: string, source: PackageSource, version?: string): Promise<UpdateResult> {
+        isLoading.value = true
+        try {
+            const result = await packageRegistry.installPackage(id, source, interactiveMode.value, version)
+            if (result.success) {
+                invalidatePackageCache(id)
+                await fetchPackages(true)
+            }
+            return result
+        } catch (error: any) {
+            return { success: false, output: '', packageId: id, error: error.message }
+        } finally {
+            isLoading.value = false
+        }
+    }
+
+    async function fetchPackageDetails(id: string): Promise<Package | null> {
+        const cacheKey = `pkg:${id}`
+        const cached = cacheService.get<Package>(cacheKey)
+        if (cached) return cached
+
+        try {
+            const result = await packageRegistry.showPackage(id)
+            if (result) cacheService.set(cacheKey, result)
+            return result
+        } catch {
+            return null
+        }
+    }
+
+    async function fetchVersions(id: string, source: PackageSource = PackageSource.Winget, limit: number = 5): Promise<string[]> {
+        const cacheKey = `versions:${id}`
+        const cached = cacheService.get<string[]>(cacheKey)
+        if (cached) return cached
+
+        try {
+            const result = await packageRegistry.getVersions(id, source, limit)
+            if (result.length > 0) cacheService.set(cacheKey, result)
+            return result
+        } catch {
+            return []
+        }
+    }
+
+    async function fetchMultiplePackageDetails(ids: string[]): Promise<Package[]> {
+        const results = await Promise.allSettled(
+            ids.map(id => fetchPackageDetails(id))
+        )
+        return results
+            .filter((r): r is PromiseFulfilledResult<Package | null> => r.status === 'fulfilled' && r.value !== null)
+            .map(r => r.value!)
+    }
+
+    async function searchRemote(query: string, source: PackageSource | 'all' = 'all'): Promise<Package[]> {
+        isLoading.value = true
+        try {
+            if (source !== 'all') {
+                const provider = packageRegistry.get(source)
+                if (provider && provider.searchPackages) {
+                    const results = await provider.searchPackages(query)
+                    return results.slice(0, 5)
+                }
+                return []
+            }
+            // If 'all', use the registry's search and limit
+            const results = await packageRegistry.searchPackages(query)
+            return results.slice(0, 5)
+        } catch (error) {
+            console.error('Search error:', error)
+            return []
+        } finally {
+            isLoading.value = false
         }
     }
 
@@ -175,6 +273,7 @@ export const usePackagesStore = defineStore('packages', () => {
             packages.value[index].updateResult = { success: result.success, error: result.error }
 
             if (result.success) {
+                invalidatePackageCache(pkg.id)
                 setTimeout(() => {
                     const idx = packages.value.findIndex(p => p.id === pkg.id && p.source === pkg.source)
                     if (idx > -1) {
@@ -278,9 +377,14 @@ export const usePackagesStore = defineStore('packages', () => {
 
         // Actions
         fetchPackages,
+        fetchPackageDetails,
+        fetchVersions,
+        fetchMultiplePackageDetails,
         updatePackage,
+        installPackage,
         uninstallPackage,
         updateAllPackages,
+        searchRemote,
         setFilter,
         getSourceCount,
         getCategoryCount

@@ -8,6 +8,11 @@
     <DropdownMenuContent align="end" class="w-56">
       <DropdownMenuLabel>{{ t('app.settings') }}</DropdownMenuLabel>
       <DropdownMenuSeparator />
+      <DropdownMenuItem @click="uiStore.openSettingsPanel()">
+        <Settings class="w-4 h-4 mr-2" />
+        {{ t('app.settings') }}
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
       
       <!-- Language Submenu -->
       <DropdownMenuSub>
@@ -70,8 +75,9 @@ import {
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Settings, Globe, Palette, Sun, Moon, Monitor, Check } from 'lucide-vue-next'
-import { useAppStore } from '@/stores'
+import { useAppStore, useUIStore } from '@/stores'
 
 const { t } = useI18n()
 const appStore = useAppStore()
+const uiStore = useUIStore()
 </script>

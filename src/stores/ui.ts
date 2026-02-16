@@ -24,6 +24,7 @@ export const useUIStore = defineStore('ui', () => {
     // Modal state
     const showInstallModal = ref(false)
     const showErrorModal = ref(false)
+    const showSettingsPanel = ref(false)
     const errorModalData = ref<ErrorModalData>({
         title: '',
         packageName: '',
@@ -60,6 +61,14 @@ export const useUIStore = defineStore('ui', () => {
 
     function closeInstallModal() {
         showInstallModal.value = false
+    }
+
+    function openSettingsPanel() {
+        showSettingsPanel.value = true
+    }
+
+    function closeSettingsPanel() {
+        showSettingsPanel.value = false
     }
 
     function openErrorModal(data: ErrorModalData) {
@@ -132,10 +141,13 @@ export const useUIStore = defineStore('ui', () => {
 
         // Modals
         showInstallModal,
+        showSettingsPanel,
         showErrorModal,
         errorModalData,
         openInstallModal,
         closeInstallModal,
+        openSettingsPanel,
+        closeSettingsPanel,
         openErrorModal,
         closeErrorModal,
 

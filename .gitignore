@@ -60,3 +60,4 @@ Cargo.lock  # For applications (libraries should commit this)
 .vscode/
 .idea/
 
+.claude/settings.local.json

@@ -43,7 +43,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useNotificationStore, type Notification } from '@/stores/notification'
+import { useNotificationStore } from '@/stores/notification'
+import type { Notification } from '@/models'
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-vue-next'
 
 const notificationStore = useNotificationStore()

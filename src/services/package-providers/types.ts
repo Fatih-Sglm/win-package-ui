@@ -66,11 +66,17 @@ export interface PackageProvider {
     updatePackage(id: string, interactive: boolean): Promise<UpdateResult>
 
     /** Paketi yükle */
-    installPackage(id: string, interactive: boolean): Promise<UpdateResult>
+    installPackage(id: string, interactive: boolean, version?: string): Promise<UpdateResult>
 
     /** Paketi kaldır */
     uninstallPackage(id: string): Promise<UpdateResult>
 
     /** Paket ara */
     searchPackages?(query: string): Promise<Package[]>
+
+    /** Paket detaylarını getir */
+    showPackage?(id: string): Promise<Package | null>
+
+    /** Mevcut versiyonları getir */
+    getVersions?(id: string, limit?: number): Promise<string[]>
 }

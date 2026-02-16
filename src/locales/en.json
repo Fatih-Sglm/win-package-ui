@@ -26,6 +26,14 @@
         "pagination": {
             "previous": "Previous",
             "next": "Next"
+        },
+        "nav": {
+            "discover": "Discover",
+            "library": "My Packages",
+            "search": "Search",
+            "downloads": "Downloads",
+            "settings": "Settings",
+            "back": "Back"
         }
     },
     "package": {
@@ -56,6 +64,34 @@
             "clearSearch": "Clear Search",
             "foundCount": "{count} packages found",
             "itemsPerPage": "Per page"
+        },
+        "discover": {
+            "title": "Discover",
+            "featured": "Featured",
+            "popular": "Most Popular",
+            "new": "New & Updated",
+            "editorsChoice": "Editor's Choice",
+            "categories": "Categories",
+            "cat_dev": "Developer Tools",
+            "cat_multimedia": "Multimedia",
+            "cat_productivity": "Productivity",
+            "cat_games": "Games",
+            "cat_utilities": "Utilities"
+        },
+        "description": "Description",
+        "detail": {
+            "gallery": "Gallery",
+            "details": "Details",
+            "sysImpact": "System Impact",
+            "sysImpactDesc": "This package will be installed in your system directories. Admin privileges may be required during the process.",
+            "selectVersion": "Select Version",
+            "versionLatest": "Latest Version",
+            "packageId": "Package ID",
+            "installVersion": "Install This Version",
+            "switchVersion": "Switch to This Version",
+            "installingVersion": "Installing...",
+            "updateAvailable": "Update Available",
+            "versionInstalled": "Installed"
         }
     },
     "modal": {

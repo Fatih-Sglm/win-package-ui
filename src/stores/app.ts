@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { ipcService } from '@/services/ipc'
 import { useNotificationStore } from './notification'
+import i18n from '@/i18n'
 
 export type Theme = 'light' | 'dark' | 'system'
 
@@ -47,8 +48,8 @@ export const useAppStore = defineStore('app', () => {
 
             if (!isAdmin.value) {
                 const notificationStore = useNotificationStore()
-                // @ts-ignore
-                const t = i18n.global.t
+                // Use i18n directly from the import
+                const t = (i18n.global as any).t
                 notificationStore.warning(
                     t('app.adminRequired'),
                     t('app.adminRequiredDesc'),

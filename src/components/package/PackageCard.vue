@@ -3,9 +3,9 @@
     <CardContent class="pt-6">
       <div class="flex flex-col sm:flex-row items-start justify-between gap-4">
         <!-- Package Info -->
-        <div class="flex-1 w-full sm:w-auto">
+        <div class="flex-1 w-full sm:w-auto cursor-pointer group/info" @click="navigateToDetail">
           <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
-            <h3 class="text-lg font-semibold">{{ pkg.name }}</h3>
+            <h3 class="text-lg font-semibold group-hover/info:text-primary transition-colors">{{ pkg.name }}</h3>
             <div class="flex gap-2 flex-wrap">
               <Badge variant="secondary">{{ pkg.category }}</Badge>
               <Badge :class="sourceClass">{{ pkg.source }}</Badge>
@@ -92,6 +92,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -120,9 +121,14 @@ const { t } = useI18n()
 const packagesStore = usePackagesStore()
 const uiStore = useUIStore()
 const notificationStore = useNotificationStore()
+const router = useRouter()
 
 const showUninstallConfirm = ref(false)
 const lastAction = ref<'update' | 'uninstall' | null>(null)
+
+const navigateToDetail = () => {
+  router.push({ name: 'package-detail', params: { id: props.pkg.id } })
+}
 
 const sourceClass = computed(() => {
   const classes: Record<string, string> = {

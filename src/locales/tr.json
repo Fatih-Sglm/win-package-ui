@@ -26,6 +26,14 @@
         "pagination": {
             "previous": "Önceki",
             "next": "Sonraki"
+        },
+        "nav": {
+            "discover": "Keşfet",
+            "library": "Paketlerim",
+            "search": "Ara",
+            "downloads": "İndirilenler",
+            "settings": "Ayarlar",
+            "back": "Geri"
         }
     },
     "package": {
@@ -56,6 +64,34 @@
             "clearSearch": "Aramayı Temizle",
             "foundCount": "{count} paket bulundu",
             "itemsPerPage": "Sayfa başı"
+        },
+        "discover": {
+            "title": "Keşfet",
+            "featured": "Öne Çıkanlar",
+            "popular": "En Popüler",
+            "new": "Yeni ve Güncellenenler",
+            "editorsChoice": "Editörün Seçimi",
+            "categories": "Kategoriler",
+            "cat_dev": "Geliştirici Araçları",
+            "cat_multimedia": "Multimedya",
+            "cat_productivity": "Üretkenlik",
+            "cat_games": "Oyunlar",
+            "cat_utilities": "Araçlar"
+        },
+        "description": "Açıklama",
+        "detail": {
+            "gallery": "Galeri",
+            "details": "Detaylar",
+            "sysImpact": "Sistem Etkisi",
+            "sysImpactDesc": "Bu paket sistem dizinlerinize yüklenecektir. İşlem sırasında yönetici hakları gerekebilir.",
+            "selectVersion": "Sürüm Seçin",
+            "versionLatest": "Son Sürüm",
+            "packageId": "Paket Kimliği",
+            "installVersion": "Bu Sürümü Yükle",
+            "switchVersion": "Bu Sürüme Geç",
+            "installingVersion": "Yükleniyor...",
+            "updateAvailable": "Güncelleme Mevcut",
+            "versionInstalled": "Yüklü"
         }
     },
     "modal": {

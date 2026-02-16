@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@tanstack/vue-table':
+        specifier: ^8.21.3
+        version: 8.21.3(vue@3.5.26(typescript@5.9.3))
       '@tauri-apps/api':
         specifier: ^2.9.1
         version: 2.9.1
@@ -47,6 +50,9 @@ importers:
       vue-i18n:
         specifier: ^11.2.2
         version: 11.2.7(vue@3.5.26(typescript@5.9.3))
+      vue-router:
+        specifier: ^4.6.4
+        version: 4.6.4(vue@3.5.26(typescript@5.9.3))
     devDependencies:
       '@tauri-apps/cli':
         specifier: ^2.9.6
@@ -564,8 +570,18 @@ packages:
   '@swc/helpers@0.5.17':
     resolution: {integrity: sha512-5IKx/Y13RsYd+sauPb2x+U/xZikHjolzfuDgTAl/Tdf3Q8rslRvC19NKDLgAJQ6wsqADk10ntlv08nPFw/gO/A==}
 
+  '@tanstack/table-core@8.21.3':
+    resolution: {integrity: sha512-ldZXEhOBb8Is7xLs01fR3YEc3DERiz5silj8tnGkFZytt1abEvl/GhUmCE0PMLaMPTa3Jk4HbKmRlHmu+gCftg==}
+    engines: {node: '>=12'}
+
   '@tanstack/virtual-core@3.13.13':
     resolution: {integrity: sha512-uQFoSdKKf5S8k51W5t7b2qpfkyIbdHMzAn+AMQvHPxKUPeo1SsGaA4JRISQT87jm28b7z8OEqPcg1IOZagQHcA==}
+
+  '@tanstack/vue-table@8.21.3':
+    resolution: {integrity: sha512-rusRyd77c5tDPloPskctMyPLFEQUeBzxdQ+2Eow4F7gDPlPOB1UnnhzfpdvqZ8ZyX2rRNGmqNnQWm87OI2OQPw==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      vue: '>=3.2'
 
   '@tanstack/vue-virtual@3.13.13':
     resolution: {integrity: sha512-Cf2xIEE8nWAfsX0N5nihkPYMeQRT+pHt4NEkuP8rNCn6lVnLDiV8rC8IeIxbKmQC0yPnj4SIBLwXYVf86xxKTQ==}
@@ -1293,6 +1309,11 @@ packages:
     peerDependencies:
       vue: ^3.0.0
 
+  vue-router@4.6.4:
+    resolution: {integrity: sha512-Hz9q5sa33Yhduglwz6g9skT8OBPii+4bFn88w6J+J4MfEo4KRRpmiNG/hHHkdbRFlLBOqxN8y8gf2Fb0MTUgVg==}
+    peerDependencies:
+      vue: ^3.5.0
+
   vue-tsc@3.2.0:
     resolution: {integrity: sha512-NFhcKKQZeTuG8/gc8XwFANx/lC0Dd3dCZ97TWh1a63PcD22KkFy4QLeT8JMtduaQT1NzySWmx3qXm16Hj1Xsxg==}
     hasBin: true
@@ -1607,7 +1628,14 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
+  '@tanstack/table-core@8.21.3': {}
+
   '@tanstack/virtual-core@3.13.13': {}
+
+  '@tanstack/vue-table@8.21.3(vue@3.5.26(typescript@5.9.3))':
+    dependencies:
+      '@tanstack/table-core': 8.21.3
+      vue: 3.5.26(typescript@5.9.3)
 
   '@tanstack/vue-virtual@3.13.13(vue@3.5.26(typescript@5.9.3))':
     dependencies:
@@ -2357,6 +2385,11 @@ snapshots:
     dependencies:
       '@intlify/core-base': 11.2.7
       '@intlify/shared': 11.2.7
+      '@vue/devtools-api': 6.6.4
+      vue: 3.5.26(typescript@5.9.3)
+
+  vue-router@4.6.4(vue@3.5.26(typescript@5.9.3)):
+    dependencies:
       '@vue/devtools-api': 6.6.4
       vue: 3.5.26(typescript@5.9.3)
 
