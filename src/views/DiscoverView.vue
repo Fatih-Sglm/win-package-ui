@@ -215,7 +215,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Input } from '@/components/ui/input'
@@ -231,7 +231,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { usePackagesStore, useNotificationStore } from '@/stores'
-import { PackageSource } from '@/models'
+import { PackageSource, CategoryType } from '@/models'
 import {
   Search,
   Star,
@@ -323,19 +323,42 @@ const POPULAR_IDS = [
   'Docker.DockerDesktop',
 ]
 
-const featuredApps = ref<Package[]>([])
-const popularApps = ref<Package[]>([])
+// Map discover category IDs to CategoryType enum values
+const categoryTypeMap: Record<string, CategoryType[]> = {
+  dev: [CategoryType.Developer],
+  multimedia: [CategoryType.Media, CategoryType.Communication],
+  productivity: [CategoryType.Productivity, CategoryType.Browser],
+  games: [CategoryType.Gaming],
+  utilities: [CategoryType.Tools, CategoryType.Other],
+}
+
+const featuredAppsRaw = ref<Package[]>([])
+const popularAppsRaw = ref<Package[]>([])
 const isFeaturedLoading = ref(true)
 const isPopularLoading = ref(true)
 
+const featuredApps = computed(() => {
+  if (!selectedCategory.value) return featuredAppsRaw.value
+  const types = categoryTypeMap[selectedCategory.value]
+  if (!types) return featuredAppsRaw.value
+  return featuredAppsRaw.value.filter(app => types.includes(app.category))
+})
+
+const popularApps = computed(() => {
+  if (!selectedCategory.value) return popularAppsRaw.value
+  const types = categoryTypeMap[selectedCategory.value]
+  if (!types) return popularAppsRaw.value
+  return popularAppsRaw.value.filter(app => types.includes(app.category))
+})
+
 onMounted(async () => {
   const fetchFeatured = packagesStore.fetchMultiplePackageDetails(FEATURED_IDS)
-    .then(results => { featuredApps.value = results })
+    .then(results => { featuredAppsRaw.value = results })
     .catch(() => {})
     .finally(() => { isFeaturedLoading.value = false })
 
   const fetchPopular = packagesStore.fetchMultiplePackageDetails(POPULAR_IDS)
-    .then(results => { popularApps.value = results })
+    .then(results => { popularAppsRaw.value = results })
     .catch(() => {})
     .finally(() => { isPopularLoading.value = false })
 
